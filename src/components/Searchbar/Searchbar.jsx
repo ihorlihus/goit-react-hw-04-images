@@ -17,7 +17,8 @@ const Searchbar = ({ onSubmit }) => {
       toast.error('Введите запрос');
       return;
     }
-    onSubmit(searchName);
+    const data = searchName;
+    onSubmit(data);
     setSearchName('');
   };
 

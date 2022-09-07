@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import Loader from 'components/Loader';
 import Button from './Button';
@@ -8,45 +8,39 @@ import Searchbar from './Searchbar';
 import ImageGallery from './ImageGallery';
 import '../styles.css';
 
-export class App extends Component {
-  state = {
-    searchName: '',
-    images: [],
-    error: null,
-    status: 'idle',
-    page: 1,
-  };
+export const App = () => {
+  const [searchName, setSearchName] = useState('');
+  const [images, setImages] = useState([]);
+  const [error, setError] = useState(null);
+  const [status, setStatus] = useState('idle');
+  const [page, setPage] = useState(1);
 
-  async componentDidUpdate(_, prevState) {
-    const prevName = prevState.searchName;
-    const currentName = this.state.searchName;
-    const prevPage = prevState.page;
-    const currentPage = this.state.page;
-
-    if (currentName !== prevName || currentPage !== prevPage) {
+  useEffect(() => {
+    async function fetchImages() {
       try {
-        this.setState({ status: 'pending' });
-        const res = await getData(currentName, currentPage);
+        setStatus('pending');
+        const res = await getData(searchName, page);
         if (res.total === 0) {
-          toast.error(`Нет картинки с именем ${currentName}, введите другое`);
-          this.setState({ status: 'idle' });
+          toast.error(`Нет картинки с именем ${searchName}, введите другое`);
+          setStatus('idle');
           return;
         }
-        this.setState({ status: 'resolved' });
-        this.setState(prevState => ({
-          images: [...prevState.images, ...res.hits],
-        }));
+        setStatus('resolved');
+        setImages(state => [...state, ...res.hits]);
+
         return;
       } catch (error) {
-        this.setState({ error, status: 'rejected' });
+        setError(error);
+        setStatus('rejected');
       }
     }
-  }
+    if (searchName !== '') {
+      fetchImages();
+    }
+  }, [searchName, page]);
 
-  handleLoadMore = () => {
-    this.setState(prevState => ({
-      page: prevState.page + 1,
-    }));
+  const handleLoadMore = () => {
+    setPage(state => state + 1);
     setTimeout(() => {
       window.scrollTo({
         top: document.documentElement.scrollHeight,
@@ -55,25 +49,24 @@ export class App extends Component {
     }, 500);
   };
 
-  handleFormSubmit = searchName => {
-    this.setState({ searchName, images: [], page: 1 });
+  const handleFormSubmit = data => {
+    setSearchName(data);
+    setImages([]);
+    setPage(1);
   };
 
-  render() {
-    const { status, images, error } = this.state;
-    return (
-      <div className="App">
-        <Searchbar onSubmit={this.handleFormSubmit} />
-        {status === 'reject' && <h1>{error.message}</h1>}
-        {images.length > 0 && status !== 'reject' && (
-          <ImageGallery images={images} />
-        )}
-        {status === 'pending' && <Loader />}
-        <ToastContainer position="top-right" autoClose={3000} theme="colored" />
-        {images.length !== 0 && status === 'resolved' && (
-          <Button onClick={this.handleLoadMore} />
-        )}
-      </div>
-    );
-  }
-}
+  return (
+    <div className="App">
+      <Searchbar onSubmit={handleFormSubmit} />
+      {status === 'reject' && <h1>{error.message}</h1>}
+      {images.length > 0 && status !== 'reject' && (
+        <ImageGallery images={images} />
+      )}
+      {status === 'pending' && <Loader />}
+      <ToastContainer position="top-right" autoClose={3000} theme="colored" />
+      {images.length !== 0 && status === 'resolved' && (
+        <Button onClick={handleLoadMore} />
+      )}
+    </div>
+  );
+};
